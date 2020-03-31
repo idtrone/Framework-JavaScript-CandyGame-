@@ -13,3 +13,23 @@ function changeTitleColor(changeColor){
 }
 
 changeTitleColor(true)
+
+// function changeTitleColor(){
+//     changeColor = true
+//     while (true){
+//         if (changeColor){
+//             color ='white'
+//             changeColor = false
+//         }
+//         else{
+//             color = '#DCFF0E';
+//             changeColor = true
+//         }
+//         self.postMessage(color)
+//         setTimeout(function () {
+//             color = 0;
+//         }, 1000)
+//     }
+// }
+//
+// changeTitleColor()
