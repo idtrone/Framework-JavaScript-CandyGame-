@@ -102,5 +102,5 @@ div[class^='col']{
 .elemento{
   width: 99.4px;
   height: 96px;
-
+  display: none;
 }
