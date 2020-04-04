@@ -1,172 +1,206 @@
-/* ---cambiar el color del titulo del juego cada segundo--- */
-var changeColorWorker = new Worker('js/change-color.js')
-changeColorWorker.onmessage = function (e) {
-    var color = e.data
-    $('.main-titulo').css('color', color);
-}
-
 var mainContainerWidth= 0.985 * parseFloat($('.main-container').css('width'))
-var timerWorker = timerWorker = new Worker('js/timer.js')
-timerWorker.onmessage = function (e) {
-    var time = e.data
-    $('#timer').text(time);
-    if (time == '00:00') {
-        timerWorker.terminate()
-        $('.panel-tablero').animate(
-            { height: '0px' },
-            3000,
-            function(){ $('.panel-tablero').hide(); }
-        )
-        .animate(
-            { width: '0px' },
-            {
-                step: function(now){
-                    $('.panel-score').css('width', mainContainerWidth - now +'px')
-                },
-                queue: false,
-                duration: 3000
-            }
-        )
-    }
-}
-
-$('.btn-reinicio').click(function () {
-    var name = $(this).text()
-    if (name =='Iniciar'){
-        $(this).text('Reiniciar')
-        fillCandys()
-    }
-    else{
-        location.reload(true)
-    }
-})
-
-function initializate() {
-    // $('div[class^="col-"]').droppable({
-    //     greedy: false,
-    //     // drop: function (event, ui) {
-    //     //     console.log(ui)
-    //     //     console.log(event)
-    //     // },
-    //     deactivate: function (event, ui) {
-    //         console.log('deactivate')
-    //     }
-    // });
-}
-
-/*--- generar Aleatoriamente los dulces ---*/
-function randomizeCandy() {
-    //aleatorizar dulces del uno al cuatro
-    var ramdomImg = Math.round(Math.random()*(4-1) + 1);
-
-    // crear codigo html de la imagen dulce
-    var img = $('<img style="display: none" class="elemento" src="image/&.png" alt="Candy &">'.replace(/&/g,ramdomImg))
-    $(img).draggable()
-    return img;
-}
-
-function fillCandys(){
-    $('div[class^="col-"]').each(function (index, element) {
-        //agregar 6 dulces aleatorios en cada columna
-        var length = 7 - $(element).find('.elemento').length
-        for (i=0; i<length; i++){
-            var candy = randomizeCandy()
-            $(element).prepend(candy);
-            $(candy).delay(i*350).fadeIn('slow')
+/**
+ * Inicia el temporizador del juego
+ */
+function initializeTimer(){
+    var timerWorker = timerWorker = new Worker('js/timer.js')
+    timerWorker.onmessage = function (e) {
+        var time = e.data
+        $('#timer').text(time);
+        //cuando se acabe el tiempo
+        if (time == '00:00') {
+            // finalizar la ejecucion del contador
+            timerWorker.terminate()
+            /*
+             * Finaliza el juego
+            */
+            // hacer la animacion de la finalización del juego
+            $('.panel-tablero').animate(
+                { height: '0px' },
+                3000,
+                function(){ $('.panel-tablero').hide(); }
+            )
+                .animate(
+                    { width: '0px' },
+                    {
+                        step: function(now){
+                            $('.panel-score').css('width', mainContainerWidth - now +'px')
+                        },
+                        queue: false,
+                        duration: 3000
+                    }
+                )
         }
-    })
+    }
 }
 
-function candyName(elementoImg) {
-    return $(elementoImg).attr('alt')
+/*========================================================*/
+/**
+ * Devuelve el nombre del dulce
+ * @param {object} imgObject - Objeto 'img'
+ * @return {string} - Valor de atributo 'alt'
+ */
+function candyName(imgObject) {
+    return $(imgObject).attr('alt')
 }
 
-function combinacionPorDulce(index, top, imgArray) {
-    /*determina si hay 3 o mas dulces iguales juntos*/
-
+/**
+ * Devuelve UN grupo de dulces JUNTOS E IGUALES  desde un 'index' inical
+ * @param {number} index - Inicio de la busqueda
+ * @param {number} length - Limite de la busqueda
+ * @param {array} candyArray - Objetos 'img' donde de hace la busqueda
+ * @return {array} groupCandies - Objetos 'img'
+ */
+function groupPerCandy(index, length, candyArray) {
     // grupo de dulces iguales
-    var groupCandies= [imgArray[index]]
-    //buscar si tengo mas de 3 dulces
-    if (top - index > 2){
+    var groupCandies= [candyArray[index]]
+    //restriccion para hacer la busqueda con los 3 ultimos dulces
+    if (length - index > 2){
         var stop = false,
             i = index;
-        while(!stop && i < top){
+        while(!stop && i < length){
             i++
-            // si el dulce inicial es igual al dulce en la posicion 'i'
-            var candyBase = candyName(imgArray[index]),
-                candyI = candyName(imgArray[i]);
-            if ( candyBase == candyI)
-                groupCandies.push(imgArray[i])
+            // si el dulce inicial es igual al (siguiente )dulce en la posicion 'i'
+            var candyBase = candyName(candyArray[index]),
+                nextCandy = candyName(candyArray[i]);
+            if ( candyBase == nextCandy)
+                // agregar dulces iguales y juntos
+                groupCandies.push(candyArray[i])
             else
-                //parar la busqueda
+                //parar si ya no hay dulces juntos e iguales
                 stop = true;
         }
     }
     return groupCandies
 }
 
-function combinacionesPorLinea(imgArray) {
-    /*determina cuantos grupos de dulces juntos hay en una linea*/
-    var combinacionesArray = [],
-        top = imgArray.length;
-    for (var i = 0; i < top; i++){
-        // buscar una combiancion de tres a mas desde la posicion i
-        var combinacion = combinacionPorDulce(i, top, imgArray)
-        if (combinacion.length > 1)
+/**
+ * Determina cuantos grupos(3 o mas) de dulces juntos hay en una linea
+ * @param {array} candyArray - Array de objetos 'img' donde de hace la busqueda
+ * @returns {array}
+ */
+function groupCandyPerLine(candyArray) {
+    // devuelve un ARREGLO VACIO SI NO EXISTE GRUPO
+    var groupCandyPerLineArray = [],
+        lengthCandyArray = candyArray.length;
+    for (var i = 0; i < lengthCandyArray; i++){
+        // obtener el grupo de dulces en la posicion i
+        var groupPerCandy = groupPerCandy(i, lengthCandyArray, candyArray)
+        if (groupPerCandy.length > 1)
             //agregar la combinacion si es igual o mayor a tres
-            if (combinacion.length >= 3){
-                i = i + (combinacion.length - 1)
-                combinacionesArray.push(combinacion)
+            if (groupPerCandy.length >= 3){
+                i = i + (groupPerCandy.length - 1)
+                groupCandyPerLineArray.push(groupPerCandy)
             }
             else
                 // ir a la siguiente posicion si la combinacion es igual a 2
                 i++;
     }
-    return combinacionesArray
+    return groupCandyPerLineArray
 }
 
+
+
+/*========================================================*/
+/**
+ * Devuelve las columnas contenidas por el contenedor '.panel-tablero'
+ * @returns {jQuery|HTMLElement}
+ */
+function colsPanelTablero() {
+    return $('.panel-tablero div[class^="col-"]');
+}
+
+/**
+ * @param {number} index - posicion de la columna que queremos obtener
+ * todo: Obtiene los dulces(img) por columnas
+ * fixme: integridad en las columnas cuando se han quitado los dulces en cada columna
+ */
 function getImgRow(index) {
-    //obteniendo los imagenes(dulces) por columnas
-    var divColumns = $('div[class^="col-"]'),
+    var divColumns = colsPanelTablero(),
         imgRow = [];
-    for (var i = 0; i < 7; i++) {
+    for (var i = 0; i < divColumns.length; i++) {
         imgRow.push($(divColumns[i]).find('.elemento')[index])
-        //imgRow[i] = $(divColumns[i]).find('.elemento')[index]
     }
     return imgRow;
 }
 
+/**
+ * Obtiene las agrupaciones de dulces(img) de cada FILA
+ * @return {array}
+ */
 function findRowsGroupCandies() {
-    //busca agrupacion de dulces en cada fila
     var rowsGroupCandies  = []
     for (var i = 0; i < 7; i++) {
         var rowImgs = getImgRow(i),
-            groupCandies = combinacionesPorLinea(rowImgs)
+            groupCandies = groupCandyPerLine(rowImgs)
         rowsGroupCandies.push(groupCandies)
     }
     return rowsGroupCandies
 }
 
+/**
+ * Obtiene las agrupaciones de dulces(img) de cada COLUMNA
+ * @return {array}
+ */
 function findColsGroupCandies() {
-    //busca agrupacion de dulces en cada columna
     var colsGroupCandies  = []
-    $('div[class^="col-"]').each(function (index, element) {
+    colsPanelTablero().each(function (index, element) {
         var colImgs = $(element).find('.elemento'),
-            groupCandies = combinacionesPorLinea(colImgs)
+            groupCandies = groupCandyPerLine(colImgs)
         colsGroupCandies.push(groupCandies)
     })
     return colsGroupCandies
 }
 
-function deleteGroupCandys(){
-    var rowGroupCandies = findRowsGroupCandies(),
-        colGroupCandies = findColsGroupCandies()
-    deleteAnimationCandies(rowGroupCandies)
-    deleteAnimationCandies(colGroupCandies)
+/**
+ * Devuelve TRUE si hay al menos un grupo de dulces en alguna linea
+ * @param {array} linesGroupCandies
+ * @return {boolean}
+ */
+function existsLineGroupCandies(linesGroupCandies) {
+    var i = 0,
+        existsLine = false
+    while(!existsLine && i < linesGroupCandies.length){
+        var groupCandies = linesGroupCandies[i]
+        // si al menos existe un grupo de dulces retonar 'true'
+        if (groupCandies.length > 0){
+            console.log(groupCandies.length)
+            existsLine = true
+        }
+        i++
+    }
+    return existsLine
 }
 
-function deleteAnimationCandies(lineGroupCandies){
-    //animacion para eliminar los grupos de dulces
+/*====================================================*/
+/**
+ * todo: funcion aun no establecida, para testear
+ */
+function deleteGroupCandys(){
+    var searchGroupCandiesWorker = new Worker('js/search-group-candies.js')
+    searchGroupCandiesWorker.postMessage(true)
+    searchGroupCandiesWorker.onmessage = function (e) {
+        var bool = e.data
+        if (bool){
+            var rowGroupCandies = findRowsGroupCandies(),
+                colGroupCandies = findColsGroupCandies()
+            // existRowsGroupCandies = existsGroupCandies(rowGroupCandies),
+            // existColsGroupCandies = existsGroupCandies(colGroupCandies)
+            if (existColsGroupCandies)
+                deleteAnimationCandies(rowGroupCandies)
+            if (existRowsGroupCandies)
+                deleteAnimationCandies(colGroupCandies)
+            fillCandiesAnimation()
+            postMessage(existColsGroupCandies || existRowsGroupCandies)
+        }
+    }
+}
+
+/**
+ * Animacion para desaparecer y eliminar los grupos de dulces
+ * @param {array} lineGroupCandies
+ */
+function deleteAnimationCandies(lineGroupCandies) {
     lineGroupCandies.forEach(function (groupCandy, i) {
         if (groupCandy.length > 0){
             groupCandy.forEach(function (candy, j) {
@@ -182,6 +216,140 @@ function deleteAnimationCandies(lineGroupCandies){
     })
 }
 
+/*========================================================*/
+/**
+ * Verifica (devuelve TRUE) si el movimiento es diagonal
+ * @param {object} ui - objeto(img) draggable
+ * @returns {boolean}
+ */
+function diagonalMove(ui) {
+    var top= ui.position.top,
+        left = ui.position.left;
+    return  top != 0 && left != 0
+}
 
+/**
+ * Genera un dulce(img) aleatoriamente
+ * @return {object} imgObject - Objeto DOM 'img'
+ */
+function randomizeCandy() {
+    //aleatorizar dulces del uno al cuatro
+    var ramdomImg = Math.round(Math.random()*(4-1) + 1);
+
+    var imgObject = $('<img style="display: none" class="elemento" src="image/&.png" alt="Candy &">'.replace(/&/g,ramdomImg))
+    $(imgObject).draggable({
+        opacity: 0.7,
+        grid: [99.4, 96],
+        drag: function (event, ui) {
+            /*
+            * RESTRICCION DE UN SOLO MOVIMIENTO
+            *   arriba o abajo
+            *   derecha o izquierda
+            */
+            if (!diagonalMove(ui)){
+                if (ui.position.left > 0){
+                    // console.log(ui.position.left)
+                    ui.position.left = Math.min( 99.39, ui.position.left );
+                }
+                else{
+                    // console.log('Menor a cero ' + ui.position.left)
+                    ui.position.left = Math.max( -99.39, ui.position.left );
+                }
+                if (ui.position.top > 0){
+                    console.log(ui.position.left)
+                    ui.position.top = Math.min( 96, ui.position.top );
+                }
+                else{
+                    console.log('Menor a cero ' + ui.position.left)
+                    ui.position.top = Math.max( -96, ui.position.top );
+                }
+            }
+            else{
+                // evitar los movimiento en diagonal
+                if (ui.position.left != 0){
+                    ui.position.top =0
+                }
+            }
+        },
+        stop: function (event, ui) {
+            // si el movimiento es vertical
+            if (ui.position.top != 0 && ui.position.left == 0){
+                if (ui.position.top > 0){
+                    // todo: por implementar
+                    var deleteCandies = deleteCandies(ui, 'down')
+                }
+                else{
+                    // todo: por implementar
+                    var deleteCandies = deleteCandies(ui, 'up')
+                }
+            }
+            // si el movimiento es horizontal
+            if (ui.position.top == 0 && ui.position.left != 0){
+                if (ui.position.left > 0){
+                    // todo: por implementar
+                }
+                else{
+                    // todo: por implementar
+                }
+            }
+        },
+    })
+    return imgObject;
+}
+
+/**
+ * Animacion de llenado de dulces (img)
+ */
+function fillCandiesAnimation(){
+    // animacion del llenado de los dulces
+    colsPanelTablero().each(function (index, element) {
+        //agregar 6 dulces aleatorios en cada columna
+        var length = 7 - $(element).find('.elemento').length
+        for (i=0; i<length; i++){
+            var candy = randomizeCandy()
+            $(element).prepend(candy);
+            $(candy).delay(i*350).fadeIn('slow')
+        }
+    })
+}
+
+/*========================================================*/
+/**
+ * Evento del boton 'Iniciar'
+ * Permite el comienzo del juego: 'Llenado de dulces'
+ * Permite el reinicio del juego: 'Recargar la pagina'
+ */
+$('.btn-reinicio').click(function () {
+    var name = $(this).text()
+    if (name =='Iniciar'){
+        $(this).text('Reiniciar')
+        fillCandiesAnimation()
+        // todo: por implementar
+        //initializeTimer()
+    }
+    else{
+        location.reload(true)
+    }
+})
+
+/*========================================================*/
+function initializate() {
+    /**
+     * Animacion (cambiar el color) del titulo del juego cada segundo
+     */
+    var changeColorWorker = new Worker('js/change-color.js')
+    changeColorWorker.onmessage = function (e) {
+        var color = e.data
+        $('.main-titulo').css('color', color);
+    }
+        /**
+         * todo: inicializar la configuracion de las columnas en modo droppable
+         */
+    colsPanelTablero().droppable({
+        accept: function (e) {
+            // console.log(e[0].offsetTop)
+            // console.log(e[0].offsetLeft)
+        }
+    })
+}
 initializate()
-
