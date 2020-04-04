@@ -37,7 +37,7 @@ function initializeTimer(){
 /*========================================================*/
 /**
  * Devuelve el nombre del dulce
- * @param {object} imgObject - Objeto 'img'
+ * @param {JQuery|img} imgObject - Objeto 'img'
  * @return {string} - Valor de atributo 'alt'
  */
 function candyName(imgObject) {
@@ -85,12 +85,12 @@ function groupCandyPerLine(candyArray) {
         lengthCandyArray = candyArray.length;
     for (var i = 0; i < lengthCandyArray; i++){
         // obtener el grupo de dulces en la posicion i
-        var groupPerCandy = groupPerCandy(i, lengthCandyArray, candyArray)
-        if (groupPerCandy.length > 1)
+        var vGroupPerCandy = groupPerCandy(i, lengthCandyArray, candyArray)
+        if (vGroupPerCandy.length > 1)
             //agregar la combinacion si es igual o mayor a tres
-            if (groupPerCandy.length >= 3){
-                i = i + (groupPerCandy.length - 1)
-                groupCandyPerLineArray.push(groupPerCandy)
+            if (vGroupPerCandy.length >= 3){
+                i = i + (vGroupPerCandy.length - 1)
+                groupCandyPerLineArray.push(vGroupPerCandy)
             }
             else
                 // ir a la siguiente posicion si la combinacion es igual a 2
@@ -98,8 +98,6 @@ function groupCandyPerLine(candyArray) {
     }
     return groupCandyPerLineArray
 }
-
-
 
 /*========================================================*/
 /**
@@ -228,6 +226,95 @@ function diagonalMove(ui) {
     return  top != 0 && left != 0
 }
 
+function canMoveUp() {
+    return false;
+}
+
+/**
+ * Movimiento del dulce hacia 'arriba' o 'abajo'
+ * @param {jQuery|HTMLElement} candy
+ * @param {'up','down'} move
+ * @returns {{candy: (jQuery|HTMLElement), swap: (jQuery|HTMLElement)}}
+ */
+function verticalMoveAnimation(candy, move) {
+    var verticalCandy = candy // default
+    if (move  == 'up'){
+        verticalCandy = $(candy).prev()
+        $(verticalCandy).before(candy)
+    }
+
+    if (move  == 'down'){
+        verticalCandy = $(candy).next()
+        $(verticalCandy).after(candy)
+    }
+    $(candy).css('top', 0);
+    return {candy: candy, swap: verticalCandy}
+}
+
+/**
+ * Movimiento del dulce hacia 'izquierda' o 'derecha'
+ * @param {jQuery|HTMLElement} candy
+ * @param {'left','right'} move
+ * @returns {{candy: (jQuery|HTMLElement), swap: (jQuery|HTMLElement)}}
+ */
+function horizontalMoveAnimation(candy, move) {
+    var indexCandy = $(candy).index(),
+        verticalSiblingCandy = candy
+    // restriccion para los dulces de indice 0
+    if (indexCandy > 0)
+        verticalSiblingCandy = $(candy).prev()
+    else
+        verticalSiblingCandy = $(candy).next()
+
+    var horizontalCandy = candy // default
+    if (move == 'left')
+        horizontalCandy = $(candy).parent().prev().children()[indexCandy]
+    if (move == 'right')
+        horizontalCandy = $(candy).parent().next().children()[indexCandy]
+
+    $(horizontalCandy).after(candy)
+    // restriccion para los dulces de indice 0
+    if (indexCandy > 0)
+        $(verticalSiblingCandy).after(horizontalCandy)
+    else
+        $(verticalSiblingCandy).before(horizontalCandy)
+
+    $(candy).css('left', 0);
+    return {candy: candy, swap: horizontalCandy}
+}
+
+/**
+ * Verifica y procesa el movimiento un dulce
+ * @param {Object} candyUi
+ * @param {up, down, right, left} movement
+ */
+function processCandyMovement(candyUi, movement) {
+    var swapCandies = {}
+    switch (movement) {
+        case 'up':
+            swapCandies = verticalMoveAnimation(candyUi.helper, 'up')
+            break
+        case 'down':
+            swapCandies = verticalMoveAnimation(candyUi.helper, 'down')
+            break
+        case 'left':
+            swapCandies = horizontalMoveAnimation(candyUi.helper, 'left')
+            break
+        case 'right':
+            swapCandies = horizontalMoveAnimation(candyUi.helper, 'right')
+            break
+    }
+    
+}
+var movementsCounter = 0
+/**
+ * Actualiza el contenido de con id:'score-text'
+ */
+function updateMovementCounter() {
+    movementsCounter++
+    $('#movimientos-text').text(movementsCounter)
+}
+var firstMovement = true;
 /**
  * Genera un dulce(img) aleatoriamente
  * @return {object} imgObject - Objeto DOM 'img'
@@ -236,7 +323,7 @@ function randomizeCandy() {
     //aleatorizar dulces del uno al cuatro
     var ramdomImg = Math.round(Math.random()*(4-1) + 1);
 
-    var imgObject = $('<img style="display: none" class="elemento" src="image/&.png" alt="Candy &">'.replace(/&/g,ramdomImg))
+    var imgObject = $('<img class="elemento" src="image/&.png" alt="Candy &">'.replace(/&/g,ramdomImg))
     $(imgObject).draggable({
         opacity: 0.7,
         grid: [99.4, 96],
@@ -248,48 +335,55 @@ function randomizeCandy() {
             */
             if (!diagonalMove(ui)){
                 if (ui.position.left > 0){
-                    // console.log(ui.position.left)
                     ui.position.left = Math.min( 99.39, ui.position.left );
                 }
                 else{
-                    // console.log('Menor a cero ' + ui.position.left)
                     ui.position.left = Math.max( -99.39, ui.position.left );
                 }
                 if (ui.position.top > 0){
-                    console.log(ui.position.left)
                     ui.position.top = Math.min( 96, ui.position.top );
                 }
                 else{
-                    console.log('Menor a cero ' + ui.position.left)
                     ui.position.top = Math.max( -96, ui.position.top );
                 }
             }
             else{
-                // evitar los movimiento en diagonal
+                // evitar movimiento en diagonal
                 if (ui.position.left != 0){
                     ui.position.top =0
+                    if (ui.position.left > 0){
+                        // console.log(ui.position.left)
+                        ui.position.left = Math.min( 99.39, ui.position.left );
+                    }
+                    else{
+                        // console.log('Menor a cero ' + ui.position.left)
+                        ui.position.left = Math.max( -99.39, ui.position.left );
+                    }
                 }
             }
         },
         stop: function (event, ui) {
+            if (firstMovement){
+                initializeTimer()
+                firstMovement = false;
+            }
+            updateMovementCounter()
             // si el movimiento es vertical
             if (ui.position.top != 0 && ui.position.left == 0){
                 if (ui.position.top > 0){
-                    // todo: por implementar
-                    var deleteCandies = deleteCandies(ui, 'down')
+                    processCandyMovement(ui, 'down')
                 }
                 else{
-                    // todo: por implementar
-                    var deleteCandies = deleteCandies(ui, 'up')
+                    processCandyMovement(ui, 'up')
                 }
             }
             // si el movimiento es horizontal
             if (ui.position.top == 0 && ui.position.left != 0){
                 if (ui.position.left > 0){
-                    // todo: por implementar
+                    processCandyMovement(ui, 'right')
                 }
                 else{
-                    // todo: por implementar
+                    processCandyMovement(ui, 'left')
                 }
             }
         },
