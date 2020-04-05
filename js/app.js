@@ -171,41 +171,33 @@ function existsLineGroupCandies(linesGroupCandies) {
 }
 
 /*====================================================*/
-/**
- * todo: funcion aun no establecida, para testear
- */
-function deleteGroupCandys(){
-    var searchGroupCandiesWorker = new Worker('js/search-group-candies.js')
-    searchGroupCandiesWorker.postMessage(true)
-    searchGroupCandiesWorker.onmessage = function (e) {
-        var bool = e.data
-        if (bool){
-            var rowGroupCandies = findRowsGroupCandies(),
-                colGroupCandies = findColsGroupCandies()
-            // existRowsGroupCandies = existsGroupCandies(rowGroupCandies),
-            // existColsGroupCandies = existsGroupCandies(colGroupCandies)
-            if (existColsGroupCandies)
-                deleteAnimationCandies(rowGroupCandies)
-            if (existRowsGroupCandies)
-                deleteAnimationCandies(colGroupCandies)
-            fillCandiesAnimation()
-            postMessage(existColsGroupCandies || existRowsGroupCandies)
-        }
+    /**
+     * Elimina los grupos de dulces
+     * @param {array} colsCandies
+     * @param {array} rowsCandies
+     */
+function deleteAllCandies(colsCandies, rowsCandies) {
+    if (existsLineGroupCandies(colsCandies) || existsLineGroupCandies(rowsCandies)){
+        deleteLineAnimationCandies(colsCandies)
+        deleteLineAnimationCandies(rowsCandies)
+        setTimeout(fillCandiesAnimation, 1200)
     }
 }
 
 /**
- * Animacion para desaparecer y eliminar los grupos de dulces
+ * Animacion para desaparecer y eliminar los grupos de dulces de una linea
  * @param {array} lineGroupCandies
  */
-function deleteAnimationCandies(lineGroupCandies) {
+function deleteLineAnimationCandies(lineGroupCandies) {
     lineGroupCandies.forEach(function (groupCandy, i) {
         if (groupCandy.length > 0){
             groupCandy.forEach(function (candy, j) {
-                $(candy).fadeToggle('fast', function () {
-                    $(candy).fadeToggle('fast', function () {
-                        $(candy).fadeToggle('fast', function () {
+                $(candy).fadeToggle(300, function () {
+                    $(candy).fadeToggle(300, function () {
+                        $(candy).fadeToggle(300, function () {
                             $(candy).remove()
+                            var score = parseInt($('#score-text').text()) + 15
+                            $('#score-text').text(score)
                         })
                     })
                 })
@@ -230,7 +222,6 @@ function diagonalMove(ui) {
  * Movimiento del dulce hacia 'arriba' o 'abajo'
  * @param {jQuery|HTMLElement} candy
  * @param {'up','down'} move
- * @returns {{candy: (jQuery|HTMLElement), swap: (jQuery|HTMLElement)}}
  */
 function verticalMoveAnimation(candy, move) {
     var verticalCandy = candy // default
@@ -244,14 +235,12 @@ function verticalMoveAnimation(candy, move) {
         $(verticalCandy).after(candy)
     }
     $(candy).css('top', 0);
-    return {candy: candy, swap: verticalCandy, move: move}
 }
 
 /**
  * Movimiento del dulce hacia 'izquierda' o 'derecha'
  * @param {jQuery|HTMLElement} candy
  * @param {'left','right'} move
- * @returns {{candy: (jQuery|HTMLElement), swap: (jQuery|HTMLElement)}}
  */
 function horizontalMoveAnimation(candy, move) {
     var indexCandy = $(candy).index(),
@@ -276,7 +265,6 @@ function horizontalMoveAnimation(candy, move) {
         $(verticalSiblingCandy).before(horizontalCandy)
 
     $(candy).css('left', 0);
-    return {candy: candy, swap: horizontalCandy, move: move}
 }
 
 /**
@@ -285,21 +273,21 @@ function horizontalMoveAnimation(candy, move) {
  * @param {up, down, right, left} movement
  */
 function swapCandy(candyUi, movement) {
-    var swapCandies = {}
     switch (movement) {
         case 'up':
-            swapCandies = verticalMoveAnimation(candyUi.helper, 'up')
+            verticalMoveAnimation(candyUi.helper, 'up')
             break
         case 'down':
-            swapCandies = verticalMoveAnimation(candyUi.helper, 'down')
+            verticalMoveAnimation(candyUi.helper, 'down')
             break
         case 'left':
-            swapCandies = horizontalMoveAnimation(candyUi.helper, 'left')
+            horizontalMoveAnimation(candyUi.helper, 'left')
             break
         case 'right':
-            swapCandies = horizontalMoveAnimation(candyUi.helper, 'right')
+            horizontalMoveAnimation(candyUi.helper, 'right')
             break
     }
+    return movement
 }
 
 var movementsCounter = 0
@@ -346,6 +334,23 @@ function canMoveDown(candy) {
 function canMoveUp(candy) {
     indexCandy = $(candy).index()
     return indexCandy > 0
+}
+
+
+function revertSwapCandy(candy, move) {
+    switch (move) {
+        case "down":
+            verticalMoveAnimation(candy, 'up')
+            break
+        case "up":
+            verticalMoveAnimation(candy, 'down')
+            break
+        case "left":
+            horizontalMoveAnimation(candy, "right")
+            break
+        case "right":
+            horizontalMoveAnimation(candy, 'left')
+    }
 }
 
 /**
@@ -407,31 +412,32 @@ function randomizeCandy() {
                 firstMovement = false;
             }
             updateMovementCounter()
-            // si el movimiento es vertical
+            var move = ''
+            // si el intercambio es vertical
             if (ui.position.top != 0 && ui.position.left == 0){
                 if (ui.position.top > 0){
-                    swapCandy(ui, 'down')
+                    move = swapCandy(ui, 'down')
                 }
                 else{
-                    swapCandy(ui, 'up')
+                    move = swapCandy(ui, 'up')
                 }
             }
-            // si el movimiento es horizontal
+            // si el intercambio es horizontal
             if (ui.position.top == 0 && ui.position.left != 0){
                 if (ui.position.left > 0){
-                    swapCandy(ui, 'right')
+                    move = swapCandy(ui, 'right')
                 }
                 else{
-                    swapCandy(ui, 'left')
+                    move = swapCandy(ui, 'left')
                 }
             }
             colsCandies = findColsGroupCandies()
             rowsCandies = findRowsGroupCandies()
             if (existsLineGroupCandies(colsCandies) || existsLineGroupCandies(rowsCandies)){
-                console.log(Console);
+                deleteAllCandies(colsCandies, rowsCandies)
             }
             else {
-
+                revertSwapCandy(ui.helper, move)
             }
         },
     })
@@ -440,18 +446,25 @@ function randomizeCandy() {
 
 /**
  * Animacion de llenado de dulces (img)
+ * Luego del llenado procede a eliminar si ahy grupos de dulces
  */
 function fillCandiesAnimation(){
     // animacion del llenado de los dulces
+    var timeOut = 0;
     colsPanelTablero().each(function (index, element) {
         //agregar 6 dulces aleatorios en cada columna
         var length = 7 - $(element).find('.elemento').length
+        timeOut = Math.max(timeOut, length)
         for (i=0; i<length; i++){
             var candy = randomizeCandy()
             $(element).prepend(candy);
             $(candy).delay(i*350).fadeIn('slow')
         }
     })
+    colsCandies = findColsGroupCandies()
+    rowsCandies = findRowsGroupCandies()
+    // hacer una pausa para terminar la animacion
+    setTimeout(deleteAllCandies, timeOut*350, colsCandies, rowsCandies)
 }
 
 /*========================================================*/
@@ -465,8 +478,6 @@ $('.btn-reinicio').click(function () {
     if (name =='Iniciar'){
         $(this).text('Reiniciar')
         fillCandiesAnimation()
-        // todo: por implementar
-        //initializeTimer()
     }
     else{
         location.reload(true)
@@ -483,9 +494,9 @@ function initializate() {
         var color = e.data
         $('.main-titulo').css('color', color);
     }
-        /**
-         * todo: inicializar la configuracion de las columnas en modo droppable
-         */
+    /**
+     * todo: inicializar la configuracion de las columnas en modo droppable
+     */
     colsPanelTablero().droppable({
         accept: function (e) {
             // console.log(e[0].offsetTop)
@@ -493,4 +504,6 @@ function initializate() {
         }
     })
 }
+
+
 initializate()
