@@ -197,6 +197,7 @@ function deleteLineAnimationCandies(lineGroupCandies) {
                         $(candy).fadeToggle(300, function () {
                             $(candy).remove()
                             var score = parseInt($('#score-text').text()) + 15
+                            //mostrar el resultado en el escore
                             $('#score-text').text(score)
                         })
                     })
@@ -407,6 +408,7 @@ function randomizeCandy() {
             }
         },
         stop: function (event, ui) {
+            // inicializar el contador con el primer movmimiento
             if (firstMovement){
                 initializeTimer()
                 firstMovement = false;
@@ -494,15 +496,6 @@ function initializate() {
         var color = e.data
         $('.main-titulo').css('color', color);
     }
-    /**
-     * todo: inicializar la configuracion de las columnas en modo droppable
-     */
-    colsPanelTablero().droppable({
-        accept: function (e) {
-            // console.log(e[0].offsetTop)
-            // console.log(e[0].offsetLeft)
-        }
-    })
 }
 
 
