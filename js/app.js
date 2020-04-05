@@ -226,10 +226,6 @@ function diagonalMove(ui) {
     return  top != 0 && left != 0
 }
 
-function canMoveUp() {
-    return false;
-}
-
 /**
  * Movimiento del dulce hacia 'arriba' o 'abajo'
  * @param {jQuery|HTMLElement} candy
@@ -248,7 +244,7 @@ function verticalMoveAnimation(candy, move) {
         $(verticalCandy).after(candy)
     }
     $(candy).css('top', 0);
-    return {candy: candy, swap: verticalCandy}
+    return {candy: candy, swap: verticalCandy, move: move}
 }
 
 /**
@@ -280,7 +276,7 @@ function horizontalMoveAnimation(candy, move) {
         $(verticalSiblingCandy).before(horizontalCandy)
 
     $(candy).css('left', 0);
-    return {candy: candy, swap: horizontalCandy}
+    return {candy: candy, swap: horizontalCandy, move: move}
 }
 
 /**
@@ -288,7 +284,7 @@ function horizontalMoveAnimation(candy, move) {
  * @param {Object} candyUi
  * @param {up, down, right, left} movement
  */
-function processCandyMovement(candyUi, movement) {
+function swapCandy(candyUi, movement) {
     var swapCandies = {}
     switch (movement) {
         case 'up':
@@ -304,8 +300,8 @@ function processCandyMovement(candyUi, movement) {
             swapCandies = horizontalMoveAnimation(candyUi.helper, 'right')
             break
     }
-    
 }
+
 var movementsCounter = 0
 /**
  * Actualiza el contenido de con id:'score-text'
@@ -315,6 +311,43 @@ function updateMovementCounter() {
     $('#movimientos-text').text(movementsCounter)
 }
 var firstMovement = true;
+
+/** *
+ * @param {JQuery|HTMLElement} candy
+ * @returns {boolean}
+ */
+function canMoveRight(candy) {
+    indexCol = $(candy).parent().index()
+    return indexCol < 6
+}
+
+/** *
+ * @param {JQuery|HTMLElement} candy
+ * @returns {boolean}
+ */
+function canMoveLeft(candy) {
+    indexCol = $(candy).parent().index()
+    return indexCol > 0
+}
+
+/** *
+ * @param {JQuery|HTMLElement} candy
+ * @returns {boolean}
+ */
+function canMoveDown(candy) {
+    indexCandy = $(candy).index()
+    return indexCandy < 6
+}
+
+/** *
+ * @param {JQuery|HTMLElement} candy
+ * @returns {boolean}
+ */
+function canMoveUp(candy) {
+    indexCandy = $(candy).index()
+    return indexCandy > 0
+}
+
 /**
  * Genera un dulce(img) aleatoriamente
  * @return {object} imgObject - Objeto DOM 'img'
@@ -328,23 +361,31 @@ function randomizeCandy() {
         opacity: 0.7,
         grid: [99.4, 96],
         drag: function (event, ui) {
-            /*
-            * RESTRICCION DE UN SOLO MOVIMIENTO
-            *   arriba o abajo
-            *   derecha o izquierda
-            */
+            //restriccion de un solo movimiento vertical u horizontal
             if (!diagonalMove(ui)){
                 if (ui.position.left > 0){
-                    ui.position.left = Math.min( 99.39, ui.position.left );
+                    if (canMoveRight(ui.helper))
+                        ui.position.left = Math.min( 99.39, ui.position.left );
+                    else
+                        ui.position.left = 0;
                 }
                 else{
-                    ui.position.left = Math.max( -99.39, ui.position.left );
+                    if (canMoveLeft(ui.helper))
+                        ui.position.left = Math.max( -99.39, ui.position.left );
+                    else
+                        ui.position.left = 0;
                 }
                 if (ui.position.top > 0){
-                    ui.position.top = Math.min( 96, ui.position.top );
+                    if (canMoveDown(ui.helper))
+                        ui.position.top = Math.min( 96, ui.position.top );
+                    else
+                        ui.position.top = 0
                 }
                 else{
-                    ui.position.top = Math.max( -96, ui.position.top );
+                    if (canMoveUp(ui.helper))
+                        ui.position.top = Math.max( -96, ui.position.top );
+                    else
+                        ui.position.top = 0
                 }
             }
             else{
@@ -352,11 +393,9 @@ function randomizeCandy() {
                 if (ui.position.left != 0){
                     ui.position.top =0
                     if (ui.position.left > 0){
-                        // console.log(ui.position.left)
                         ui.position.left = Math.min( 99.39, ui.position.left );
                     }
                     else{
-                        // console.log('Menor a cero ' + ui.position.left)
                         ui.position.left = Math.max( -99.39, ui.position.left );
                     }
                 }
@@ -371,20 +410,28 @@ function randomizeCandy() {
             // si el movimiento es vertical
             if (ui.position.top != 0 && ui.position.left == 0){
                 if (ui.position.top > 0){
-                    processCandyMovement(ui, 'down')
+                    swapCandy(ui, 'down')
                 }
                 else{
-                    processCandyMovement(ui, 'up')
+                    swapCandy(ui, 'up')
                 }
             }
             // si el movimiento es horizontal
             if (ui.position.top == 0 && ui.position.left != 0){
                 if (ui.position.left > 0){
-                    processCandyMovement(ui, 'right')
+                    swapCandy(ui, 'right')
                 }
                 else{
-                    processCandyMovement(ui, 'left')
+                    swapCandy(ui, 'left')
                 }
+            }
+            colsCandies = findColsGroupCandies()
+            rowsCandies = findRowsGroupCandies()
+            if (existsLineGroupCandies(colsCandies) || existsLineGroupCandies(rowsCandies)){
+                console.log(Console);
+            }
+            else {
+
             }
         },
     })
