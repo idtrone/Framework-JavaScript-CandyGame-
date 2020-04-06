@@ -299,7 +299,6 @@ function updateMovementCounter() {
     movementsCounter++
     $('#movimientos-text').text(movementsCounter)
 }
-var firstMovement = true;
 
 /** *
  * @param {JQuery|HTMLElement} candy
@@ -408,11 +407,6 @@ function randomizeCandy() {
             }
         },
         stop: function (event, ui) {
-            // inicializar el contador con el primer movmimiento
-            if (firstMovement){
-                initializeTimer()
-                firstMovement = false;
-            }
             updateMovementCounter()
             var move = ''
             // si el intercambio es vertical
@@ -479,6 +473,8 @@ $('.btn-reinicio').click(function () {
     var name = $(this).text()
     if (name =='Iniciar'){
         $(this).text('Reiniciar')
+
+        initializeTimer()
         fillCandiesAnimation()
     }
     else{
