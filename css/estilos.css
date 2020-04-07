@@ -104,3 +104,13 @@ div[class^='col']{
   height: 96px;
   display: none;
 }
+
+.jst-hours {
+  display: none;
+}
+.jst-minutes {
+  display: inline;
+}
+.jst-seconds {
+  display: inline;
+}

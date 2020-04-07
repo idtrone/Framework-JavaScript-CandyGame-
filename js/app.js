@@ -1,39 +1,4 @@
 var mainContainerWidth= 0.985 * parseFloat($('.main-container').css('width'))
-/**
- * Inicia el temporizador del juego
- */
-function initializeTimer(){
-    var timerWorker = timerWorker = new Worker('js/timer.js')
-    timerWorker.onmessage = function (e) {
-        var time = e.data
-        $('#timer').text(time);
-        //cuando se acabe el tiempo
-        if (time == '00:00') {
-            // finalizar la ejecucion del contador
-            timerWorker.terminate()
-            /*
-             * Finaliza el juego
-            */
-            // hacer la animacion de la finalización del juego
-            $('.panel-tablero').animate(
-                { height: '0px' },
-                3000,
-                function(){ $('.panel-tablero').hide(); }
-            )
-                .animate(
-                    { width: '0px' },
-                    {
-                        step: function(now){
-                            $('.panel-score').css('width', mainContainerWidth - now +'px')
-                        },
-                        queue: false,
-                        duration: 3000
-                    }
-                )
-        }
-    }
-}
-
 /*========================================================*/
 /**
  * Devuelve el nombre del dulce
@@ -473,9 +438,33 @@ $('.btn-reinicio').click(function () {
     var name = $(this).text()
     if (name =='Iniciar'){
         $(this).text('Reiniciar')
-
-        initializeTimer()
         fillCandiesAnimation()
+        $('#timer').text('')
+        /**
+         * Inicia el temporizador del juego
+         */
+        $('.timer').startTimer({
+            onComplete: function () {
+                /*
+                 * Finaliza el juego
+                */
+                $('.panel-tablero').animate(
+                    { height: '0px' },
+                    3000,
+                    function(){ $('.panel-tablero').hide(); }
+                )
+                    .animate(
+                        { width: '0px' },
+                        {
+                            step: function(now){
+                                $('.panel-score').css('width', mainContainerWidth - now +'px')
+                            },
+                            queue: false,
+                            duration: 3000
+                        }
+                    )
+            }
+        });
     }
     else{
         location.reload(true)
@@ -483,16 +472,26 @@ $('.btn-reinicio').click(function () {
 })
 
 /*========================================================*/
-function initializate() {
-    /**
-     * Animacion (cambiar el color) del titulo del juego cada segundo
-     */
-    var changeColorWorker = new Worker('js/change-color.js')
-    changeColorWorker.onmessage = function (e) {
-        var color = e.data
-        $('.main-titulo').css('color', color);
-    }
+/**
+ * Animacion (cambiar el color) del titulo del juego cada segundo
+ */
+function changeWhiteTitle() {
+    $('.main-titulo').animate(
+        {
+            color: '#FFFFFF'
+        }, 1000, 'easeInQuint', function () {
+            changeYellowTitle()
+        });
 }
 
+function changeYellowTitle() {
+    $('.main-titulo').animate(
+        {
+            color: '#DCFF0E'
+        }, 1000, 'easeInQuint', function () {
+            changeWhiteTitle()
+        });
+}
 
-initializate()
+changeWhiteTitle()
+
